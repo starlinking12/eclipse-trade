@@ -12,6 +12,7 @@ export default function TradingInterface() {
   const [fromToken, setFromToken] = useState({ symbol: 'USDT', balance: '12400.00' })
   const [toToken, setToToken] = useState({ symbol: 'ETH', balance: '3.7204' })
   const chartContainerRef = useRef(null)
+  const tvWidgetRef = useRef(null)
 
   // Fetch real ETH price
   useEffect(() => {
@@ -23,14 +24,11 @@ export default function TradingInterface() {
       .catch(() => {})
   }, [])
 
-  // Load TradingView chart
+  // Initialize TradingView chart
   useEffect(() => {
-    if (chartContainerRef.current && !window.TradingView) {
-      const script = document.createElement('script')
-      script.src = 'https://s3.tradingview.com/tv.js'
-      script.async = true
-      script.onload = () => {
-        new window.TradingView.widget({
+    const initChart = () => {
+      if (chartContainerRef.current && window.TradingView && !tvWidgetRef.current) {
+        tvWidgetRef.current = new window.TradingView.widget({
           container_id: 'tv-chart-container',
           symbol: 'BINANCE:ETHUSDT',
           interval: '15',
@@ -45,29 +43,49 @@ export default function TradingInterface() {
           studies: ['Volume@tv-basicstudies', 'RSI@tv-basicstudies']
         })
       }
+    }
+
+    if (!window.TradingView) {
+      const script = document.createElement('script')
+      script.src = 'https://s3.tradingview.com/tv.js'
+      script.async = true
+      script.onload = initChart
       document.head.appendChild(script)
+    } else {
+      initChart()
+    }
+
+    return () => {
+      if (tvWidgetRef.current) {
+        tvWidgetRef.current.remove()
+        tvWidgetRef.current = null
+      }
     }
   }, [])
 
-  const rate = 1 / ethPrice
-  const toAmount = amount ? (parseFloat(amount) * rate).toFixed(6) : '0.00'
-
-  // Generate fake order book data (visual only)
+  // Generate order book data (visual only)
   const generateOrderBook = () => {
     const asks = []
     const bids = []
     for (let i = 1; i <= 8; i++) {
-      asks.push({ price: ethPrice + (i * 1.2), size: (Math.random() * 15 + 2).toFixed(2), total: 0 })
-      bids.push({ price: ethPrice - (i * 1.1), size: (Math.random() * 20 + 3).toFixed(2), total: 0 })
+      asks.push({
+        price: ethPrice + (i * 1.2),
+        size: (Math.random() * 15 + 2).toFixed(2),
+        total: ((ethPrice + (i * 1.2)) * (Math.random() * 15 + 2)).toFixed(0)
+      })
+      bids.push({
+        price: ethPrice - (i * 1.1),
+        size: (Math.random() * 20 + 3).toFixed(2),
+        total: ((ethPrice - (i * 1.1)) * (Math.random() * 20 + 3)).toFixed(0)
+      })
     }
-    asks.forEach(a => a.total = (a.price * parseFloat(a.size)).toFixed(0))
-    bids.forEach(b => b.total = (b.price * parseFloat(b.size)).toFixed(0))
     return { asks, bids }
   }
 
   const [orderBook, setOrderBook] = useState(generateOrderBook())
+  const [recentTrades, setRecentTrades] = useState([])
 
-  // Animate order book (visual only, no real data)
+  // Animate order book
   useEffect(() => {
     const interval = setInterval(() => {
       setOrderBook(generateOrderBook())
@@ -75,14 +93,14 @@ export default function TradingInterface() {
     return () => clearInterval(interval)
   }, [ethPrice])
 
-  // Recent trades (visual only)
-  const [recentTrades, setRecentTrades] = useState([])
+  // Generate recent trades
   useEffect(() => {
     const trades = []
     for (let i = 0; i < 10; i++) {
       trades.push({
         price: ethPrice + (Math.random() - 0.5) * 8,
         amount: (Math.random() * 5 + 0.5).toFixed(3),
+        total: ((ethPrice + (Math.random() - 0.5) * 8) * (Math.random() * 5 + 0.5)).toFixed(2),
         time: new Date().toLocaleTimeString(),
         isBuy: Math.random() > 0.5
       })
@@ -94,6 +112,7 @@ export default function TradingInterface() {
         const newTrade = {
           price: ethPrice + (Math.random() - 0.5) * 6,
           amount: (Math.random() * 4 + 0.3).toFixed(3),
+          total: ((ethPrice + (Math.random() - 0.5) * 6) * (Math.random() * 4 + 0.3)).toFixed(2),
           time: new Date().toLocaleTimeString(),
           isBuy: Math.random() > 0.5
         }
@@ -102,6 +121,9 @@ export default function TradingInterface() {
     }, 4000)
     return () => clearInterval(interval)
   }, [ethPrice])
+
+  const rate = 1 / ethPrice
+  const toAmount = amount ? (parseFloat(amount) * rate).toFixed(6) : '0.00'
 
   const handleTrade = async () => {
     if (!isConnected || !address) {
@@ -189,7 +211,7 @@ export default function TradingInterface() {
               <span className="ind">Vol</span>
             </div>
           </div>
-          <div id="tv-chart-container" ref={chartContainerRef} style={{ flex: 1, minHeight: '400px' }}></div>
+          <div id="tv-chart-container" ref={chartContainerRef} style={{ flex: 1, minHeight: '400px', width: '100%' }}></div>
         </div>
 
         {/* ORDER BOOK */}
@@ -205,9 +227,9 @@ export default function TradingInterface() {
           </div>
           <div className="obch"><span>Price</span><span>Size</span><span>Total</span></div>
           
-          {/* Asks (Sell orders) */}
+          {/* Asks */}
           <div className="obsec" style={{ maxHeight: '200px', display: 'flex', flexDirection: 'column-reverse', overflowY: 'auto' }}>
-            {orderBook.asks.slice().reverse().map((ask, i) => (
+            {[...orderBook.asks].reverse().map((ask, i) => (
               <div key={i} className="obrow sell">
                 <span className="obc">{ask.price.toFixed(2)}</span>
                 <span className="obc">{ask.size}</span>
@@ -221,7 +243,7 @@ export default function TradingInterface() {
             <span className="obspr-l"><span>Mark Price</span><span style={{ color: 'var(--t2)' }}>Spread: 0.08%</span></span>
           </div>
           
-          {/* Bids (Buy orders) */}
+          {/* Bids */}
           <div className="obsec" style={{ maxHeight: '200px', overflowY: 'auto' }}>
             {orderBook.bids.map((bid, i) => (
               <div key={i} className="obrow buy">
@@ -339,7 +361,7 @@ export default function TradingInterface() {
             <div key={i} className="trrow">
               <span className={`tc2 ${trade.isBuy ? 'bc' : 'sc'}`}>{trade.price.toFixed(2)}</span>
               <span className="tc2">{trade.amount}</span>
-              <span className="tc2">{(trade.price * parseFloat(trade.amount)).toFixed(2)}</span>
+              <span className="tc2">{trade.total}</span>
               <span className="tc2 tm">{trade.time}</span>
             </div>
           ))}
