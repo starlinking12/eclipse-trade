@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import React, { useEffect } from 'react'
 import Navbar from './components/Navbar'
 import StatsBar from './components/StatsBar'
 import TradingInterface from './components/TradingInterface'
