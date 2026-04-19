@@ -5,15 +5,19 @@ import TradingInterface from './components/TradingInterface'
 
 function App() {
   useEffect(() => {
-    // Add background orbs to body
     const bgDiv = document.createElement('div')
     bgDiv.className = 'bg'
     bgDiv.innerHTML = '<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div><div class="orb o4"></div>'
     document.body.appendChild(bgDiv)
-    
+
     const noiseDiv = document.createElement('div')
     noiseDiv.className = 'noise'
     document.body.appendChild(noiseDiv)
+
+    return () => {
+      if (bgDiv.parentNode) bgDiv.parentNode.removeChild(bgDiv)
+      if (noiseDiv.parentNode) noiseDiv.parentNode.removeChild(noiseDiv)
+    }
   }, [])
 
   return (
