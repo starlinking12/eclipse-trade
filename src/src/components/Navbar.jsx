@@ -1,3 +1,4 @@
+import React from 'react'
 import { useWeb3Modal } from '@web3modal/wagmi/react'
 import { useAccount } from 'wagmi'
 
