@@ -1,38 +1,26 @@
-import React from 'react'
+import React, { useEffect } from 'react'
+import Navbar from './components/Navbar'
+import StatsBar from './components/StatsBar'
+import TradingInterface from './components/TradingInterface'
 
 function App() {
+  useEffect(() => {
+    // Add background orbs to body
+    const bgDiv = document.createElement('div')
+    bgDiv.className = 'bg'
+    bgDiv.innerHTML = '<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div><div class="orb o4"></div>'
+    document.body.appendChild(bgDiv)
+    
+    const noiseDiv = document.createElement('div')
+    noiseDiv.className = 'noise'
+    document.body.appendChild(noiseDiv)
+  }, [])
+
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #0a0a2a 0%, #0f0f2a 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'Arial, sans-serif'
-    }}>
-      <div style={{
-        background: 'rgba(15, 23, 42, 0.6)',
-        backdropFilter: 'blur(20px)',
-        borderRadius: '32px',
-        padding: '2rem',
-        textAlign: 'center',
-        maxWidth: '500px',
-        width: '100%'
-      }}>
-        <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>ECLIPSE PROTOCOL</h1>
-        <p style={{ marginBottom: '1rem' }}>If you see this, React is working!</p>
-        <button style={{
-          background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-          color: 'white',
-          border: 'none',
-          padding: '1rem',
-          borderRadius: '12px',
-          cursor: 'pointer',
-          width: '100%'
-        }}>
-          Test Button
-        </button>
-      </div>
+    <div className="app">
+      <Navbar />
+      <StatsBar />
+      <TradingInterface />
     </div>
   )
 }
